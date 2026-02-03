@@ -1,0 +1,34 @@
+{
+  "name": "sns-buster",
+  "version": "0.1.0",
+  "description": "Security testing tool for Amazon SNS topics",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "sns-buster": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "aws4": "^1.13.2",
+    "commander": "^12.1.0"
+  },
+  "author": "Daniel Grzelak",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plerionhq/sns-buster.git"
+  },
+  "homepage": "https://github.com/plerionhq/sns-buster",
+  "keywords": ["aws", "sns", "security", "testing", "permissions"],
+  "devDependencies": {
+    "@types/aws4": "^1.11.6",
+    "@types/bun": "^1.1.14",
+    "typescript": "^5.7.2"
+  }
+}

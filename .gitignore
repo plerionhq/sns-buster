@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Bun
+bun.lockb
+
+# Output directory - keep dir, ignore contents
+output/*
+!output/.gitkeep
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation - keep dir structure, ignore contents
+docs/*
+!docs/api/
+docs/api/*
+!docs/api/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
