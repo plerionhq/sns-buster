@@ -12,6 +12,10 @@ export interface CliOptions {
   allowTopicArn?: string;
   /** Request mutations mode enabled */
   requestMutations?: boolean;
+  /** Session errors mode: role ARN to assume with deny-all policy */
+  sessionErrorsRoleArn?: string;
+  /** Session errors mode: topic ARNs to test */
+  sessionErrorsTopics?: string[];
 }
 
 export function createCli(): Command {
@@ -27,6 +31,7 @@ export function createCli(): Command {
     .option('--all', 'Run all topic-specific actions (default)')
     .option('--compare [topics...]', 'Compare mode: compare responses between topics [allow-arn] [deny-arn]')
     .option('--request-mutations [topics...]', 'Request mutations mode: test parameter mutations [allow-arn] [deny-arn]')
+    .option('--session-errors [args...]', 'Session errors mode: detect public topics via deny-all session policy [role-arn] [topic-arns...]')
     .option('-r, --region <region>', 'Override AWS region (default: derived from ARN)')
     .option('-v, --verbose', 'Enable verbose output', false)
     .option('-o, --output <dir>', 'Output directory', 'output');
@@ -38,6 +43,7 @@ export function parseOptions(program: Command): CliOptions {
   const opts = program.opts();
   const isCompareMode = opts.compare !== undefined;
   const isRequestMutationsMode = opts.requestMutations !== undefined;
+  const isSessionErrorsMode = opts.sessionErrors !== undefined;
 
   // Parse compare topics: --compare [allow] [deny]
   let compareAllowArn: string | undefined;
@@ -64,9 +70,23 @@ export function parseOptions(program: Command): CliOptions {
     }
   }
 
+  // Parse session errors args: --session-errors [role-arn] [topic-arns...]
+  let sessionErrorsRoleArn: string | undefined;
+  let sessionErrorsTopics: string[] | undefined;
+
+  if (isSessionErrorsMode) {
+    const sessionErrorsArgs = Array.isArray(opts.sessionErrors) ? opts.sessionErrors : [];
+    sessionErrorsRoleArn = sessionErrorsArgs[0];
+    sessionErrorsTopics = sessionErrorsArgs.slice(1);
+    if (!sessionErrorsRoleArn || sessionErrorsTopics.length === 0) {
+      console.error('Error: --session-errors requires a role ARN and at least one topic ARN: --session-errors <role-arn> <topic-arn...>');
+      process.exit(1);
+    }
+  }
+
   // Determine topic ARN for standard mode
   let topicArn = program.args[0];
-  if (!topicArn && !isCompareMode && !isRequestMutationsMode) {
+  if (!topicArn && !isCompareMode && !isRequestMutationsMode && !isSessionErrorsMode) {
     console.error('Error: topic ARN is required. Usage: sns-buster <topic-arn>');
     process.exit(1);
   }
@@ -80,7 +100,7 @@ export function parseOptions(program: Command): CliOptions {
   }
 
   return {
-    topicArn: compareAllowArn || topicArn,
+    topicArn: compareAllowArn || topicArn || '',
     mode,
     region: opts.region,
     verbose: opts.verbose || false,
@@ -88,5 +108,7 @@ export function parseOptions(program: Command): CliOptions {
     compare: compareDenyArn,
     allowTopicArn: compareAllowArn,
     requestMutations: isRequestMutationsMode,
+    sessionErrorsRoleArn,
+    sessionErrorsTopics,
   };
 }

@@ -7,6 +7,7 @@ When you find a public or misconfigured SNS topic, you need to understand what a
 1. **Probe** the topic to see which actions succeed or fail
 2. **Compare** the difference in responses between existing exposed and unexposed topics
 3. **Find mutations** that let you verify permissions without reading data or making changes (e.g., get a 400 "invalid parameter" instead of 200 "success")
+4. **Detect public topics** safely using session policy error messages (no risk of executing actions)
 
 Look in the `output` directory after executing sns-buster for full request and response logs.
 
@@ -31,9 +32,12 @@ sns-buster --compare <allowed-topic> <denied-topic>
 
 # Step 3: Find non-intrusive verification methods
 sns-buster --request-mutations <allowed-topic> <denied-topic>
+
+# Step 4: Detect public topics safely via session policy errors
+sns-buster --session-errors <role-arn> <topic-arn...>
 ```
 
-## The Three Modes
+## The Four Modes
 
 ### Mode 1: Probe (Default)
 
@@ -190,6 +194,49 @@ The non-existent topic is critical: if it returns 403 but allowed returns 400, w
 
 This tells you: "Send a Publish request with an empty message. If you get 400, you have permission. If you get 403, you don't. Either way, no message is actually published."
 
+### Mode 4: Session Errors
+
+Detect public topics by analyzing AWS error messages with a deny-all session policy:
+
+```bash
+sns-buster --session-errors <role-arn> <topic-arn...>
+```
+
+This mode assumes the specified role with a `Deny:*:*` session policy, then tests each topic. Since the session policy denies everything, no action can ever succeed - but AWS's error messages reveal whether the resource policy would have allowed access.
+
+```
+Credentials verified: <your-identity>
+
+Session Errors Mode (deny-all session policy)
+
+Role:     <role-arn>
+Session:  sns-buster-safe-<timestamp>
+Policy:   Deny:*:*
+
+Testing: <topic-arn>
+
+Action                      Status    Classification
+----------------------------------------------------
+GetTopicAttributes          403       PUBLIC
+Publish                     403       PUBLIC
+Subscribe                   403       PUBLIC
+DeleteTopic                 403       PRIVATE
+
+Summary:
+  Topics tested: 1
+  Actions per topic: 14
+  PUBLIC (would be allowed): 13
+  PRIVATE: 1
+```
+
+**How it works:**
+
+AWS error messages differ based on which policy blocked the request:
+- `"explicit deny in a session policy"` → **PUBLIC** (resource policy would allow)
+- `"no resource-based policy allows"` → **PRIVATE** (no resource policy grants access)
+
+This is the safest detection method - actions can never execute regardless of permissions.
+
 ## Why This Matters
 
 When testing SNS permissions, you often want to verify access without:
@@ -228,6 +275,7 @@ Without credentials, only unsigned requests are sent.
 | `--all` | Test all actions (14 actions, default) |
 | `--compare [allow] [deny]` | Compare two topics |
 | `--request-mutations [allow] [deny]` | Find non-intrusive verification methods |
+| `--session-errors [role] [topics...]` | Detect public topics via session policy errors |
 | `-v, --verbose` | Detailed output |
 | `-o <dir>` | Output directory (default: `output`) |
 

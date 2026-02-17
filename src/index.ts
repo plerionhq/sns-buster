@@ -3,6 +3,7 @@
 import { createCli, parseOptions } from './cli';
 import { run } from './runner';
 import { runMutations, runRequestMutations } from './mutations/runner';
+import { runSessionErrors } from './safemode/runner';
 import { ArnParseError } from './utils/arn';
 
 async function main(): Promise<void> {
@@ -12,7 +13,9 @@ async function main(): Promise<void> {
   const options = parseOptions(program);
 
   try {
-    if (options.requestMutations) {
+    if (options.sessionErrorsRoleArn) {
+      await runSessionErrors(options);
+    } else if (options.requestMutations) {
       await runRequestMutations(options);
     } else if (options.compare) {
       await runMutations(options);
